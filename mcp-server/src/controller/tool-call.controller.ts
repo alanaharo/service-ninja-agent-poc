@@ -1,0 +1,174 @@
+import {
+  createServiceNinjaProjectTool,
+  deleteServiceNinjaProjectTool,
+  getProjectToolListTool,
+  readServiceNinjaProjectTool,
+  updateServiceNinjaProjectTool,
+} from '../tools/service-ninja/service-ninja-project.tool'
+import {
+  createServiceNinjaEnvironmentTool,
+  deleteServiceNinjaEnvironmentTool,
+  getEnvironmentToolListTool,
+  readServiceNinjaEnvironmentTool,
+  updateServiceNinjaEnvironmentTool,
+} from '../tools/service-ninja/service-ninja-environment.tool'
+import {
+  createServiceNinjaResourceTool,
+  deleteServiceNinjaResourceTool,
+  getResourceToolListTool,
+  readServiceNinjaResourceTool,
+  updateServiceNinjaResourceTool,
+} from '../tools/service-ninja/service-ninja-resource.tool'
+import {
+  createServiceNinjaResourceContactTool,
+  deleteServiceNinjaResourceContactTool,
+  getResourceContactToolListTool,
+  readServiceNinjaResourceContactTool,
+  updateServiceNinjaResourceContactTool,
+} from '../tools/service-ninja/service-ninja-resource-contact.tool'
+import {
+  createServiceNinjaContactTool,
+  deleteServiceNinjaContactTool,
+  getContactToolListTool,
+  readServiceNinjaContactTool,
+  searchServiceNinjaContactsTool,
+  updateServiceNinjaContactTool,
+} from '../tools/service-ninja/service-ninja-contact.tool'
+import { getProjectResourcesHealthStatusTool, getResourceAliveStatusTool, getResourceHealthStatusTool } from '../tools/resource_monitor.tool'
+
+import type { ServiceNinjaContact, ServiceNinjaEnv, ServiceNinjaResource, ServiceNinjaResourceContact } from '../sql-lite/sql-lite-table.types'
+import type { McpToolCallParams, McpToolCallResult } from '../types'
+
+export async function ToolCallController({ body }: { body: McpToolCallParams }): Promise<McpToolCallResult> {
+  console.log('--- ToolCallController ---')
+  try {
+    if (!body || typeof body !== 'object') {
+      console.warn('--- Invalid request body ---', body)
+      return {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: 'Invalid request body',
+          },
+        ],
+      }
+    }
+
+    const { name, arguments: args } = body
+    console.log('name:', name)
+
+    if (!name || typeof name !== 'string') {
+      console.warn('--- Missing or invalid tool name ---', name)
+      return {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: 'Missing or invalid tool name',
+          },
+        ],
+      }
+    }
+
+    // Route to appropriate tool
+    switch (name) {
+      // Project tools
+      case 'create_project':
+        return createServiceNinjaProjectTool(args as { name: string; description: string })
+      case 'list_projects':
+        return getProjectToolListTool()
+      case 'get_project_by_id':
+      case 'get_project_by_name':
+        return readServiceNinjaProjectTool(args as { name?: string; id?: number })
+      case 'update_project':
+        return updateServiceNinjaProjectTool(args as { id: number; name?: string; description?: string })
+      case 'delete_project':
+        return deleteServiceNinjaProjectTool(args as { id: number })
+
+      // Environment tools
+      case 'create_environment':
+        return createServiceNinjaEnvironmentTool(args as Partial<ServiceNinjaEnv>)
+      case 'list_environments':
+        return getEnvironmentToolListTool((args as { projectId?: number })?.projectId)
+      case 'get_environment_by_id':
+      case 'get_environment_by_name':
+        return readServiceNinjaEnvironmentTool(args as { name?: string; id?: number; projectId?: number })
+      case 'update_environment':
+        return updateServiceNinjaEnvironmentTool(args as Partial<ServiceNinjaEnv> & { id: number })
+      case 'delete_environment':
+        return deleteServiceNinjaEnvironmentTool(args as { id: number })
+
+      // Resource tools
+      case 'create_resource':
+        return createServiceNinjaResourceTool(args as Partial<ServiceNinjaResource>)
+      case 'list_resources':
+        return getResourceToolListTool((args as { projectId?: number; envId?: number })?.projectId, (args as { projectId?: number; envId?: number })?.envId)
+      case 'get_resource_by_id':
+      case 'get_resource_by_name':
+        return readServiceNinjaResourceTool(args as { name?: string; id?: number; projectId?: number; envId?: number })
+      case 'update_resource':
+        return updateServiceNinjaResourceTool(args as Partial<ServiceNinjaResource> & { id: number })
+      case 'delete_resource':
+        return deleteServiceNinjaResourceTool(args as { id: number })
+
+      // Resource Monitoring tools
+      case 'get_resource_health_status':
+        return getResourceHealthStatusTool(args as { resourceId: number })
+      case 'get_project_resources_health_status':
+        return getProjectResourcesHealthStatusTool(args as { projectId: number; envId: number })
+      case 'get_resource_alive_status':
+        return getResourceAliveStatusTool(args as { resourceId: number })
+
+      // Resource Contact tools
+      case 'create_resource_contact':
+        return createServiceNinjaResourceContactTool(args as ServiceNinjaResourceContact)
+      case 'list_resource_contacts':
+        return getResourceContactToolListTool((args as { resourceId?: number; contactId?: number })?.resourceId, (args as { resourceId?: number; contactId?: number })?.contactId)
+      case 'get_resource_contact_by_ids':
+        return readServiceNinjaResourceContactTool(args as { resourceId: number; contactId: number })
+      case 'update_resource_contact':
+        return updateServiceNinjaResourceContactTool(args as Partial<ServiceNinjaResourceContact> & { resourceId: number; contactId: number })
+      case 'delete_resource_contact':
+        return deleteServiceNinjaResourceContactTool(args as { resourceId: number; contactId: number })
+
+      // Contact tools
+      case 'create_contact':
+        return createServiceNinjaContactTool(args as { firstName: string; lastName: string; email: string; phone?: string })
+      case 'list_contacts':
+        return getContactToolListTool()
+      case 'get_contact_by_id':
+        return readServiceNinjaContactTool(args as { id: number })
+      case 'get_contact_by_email':
+        return readServiceNinjaContactTool(args as { email: string })
+      case 'update_contact':
+        return updateServiceNinjaContactTool(args as Partial<ServiceNinjaContact> & { id: number })
+      case 'delete_contact':
+        return deleteServiceNinjaContactTool(args as { id: number })
+      case 'search_contacts':
+        return searchServiceNinjaContactsTool(args as { searchTerm: string })
+
+      default:
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: `Unknown tool: ${name}`,
+            },
+          ],
+        }
+    }
+  } catch (error) {
+    console.error('--- ToolCallController error ---', error)
+    return {
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        },
+      ],
+    }
+  }
+}
